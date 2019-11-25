@@ -1,0 +1,73 @@
+buildscript {
+    ext {
+        springBootVersion = "2.1.6.RELEASE"
+        guavaVersion = "28.0-jre"
+        commonsLangVersion = "3.9"
+        commonsCollectionsVersion = "4.4"
+        lombokVersion = "1.18.8"
+        influxdbVersion = "2.15"
+    }
+}
+
+group 'com.jiebai'
+
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+
+sourceCompatibility = 1.8
+
+// java编译的时候缺省状态下会因为中文字符而失败
+[compileJava, compileTestJava, javadoc]*.options*.encoding = 'UTF-8'
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    classifier 'sources'
+}
+task javadocJar(type: Jar) {
+    from javadoc
+    classifier 'javadoc'
+}
+
+repositories {
+    mavenLocal() // 使用本地仓库
+    maven { url "http://maven.aliyun.com/nexus/content/repositories/central/" }
+    maven { url "http://nexus.51buyin.com/nexus/content/repositories/jiebai-release/" }
+    maven { url "http://maven.aliyun.com/nexus/content/repositories/central/" }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version project.version
+            //若是war包，就写components.web,若是jar包，就写components.java
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+    repositories {
+        maven {
+            def releasesRepoUrl = "$repository_url/repositories/jiebai-release/"
+            def snapshotsRepoUrl = "$repository_url/repositories/jiebai-snapshot"
+            url version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username "$nexus_username"
+                password "$nexus_password"
+            }
+        }
+    }
+}
+
+dependencies {
+    compileOnly("org.springframework.boot:spring-boot-starter:${springBootVersion}")
+    compile(
+            "com.google.guava:guava:${guavaVersion}",
+            "org.apache.commons:commons-lang3:${commonsLangVersion}",
+            "org.apache.commons:commons-collections4:${commonsCollectionsVersion}",
+            "org.projectlombok:lombok:${lombokVersion}",
+            "org.influxdb:influxdb-java:${influxdbVersion}"
+    )
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
